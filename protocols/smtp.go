@@ -53,6 +53,8 @@ func validateRCPT(query string) bool {
 }
 
 // HandleSMTP takes a net.Conn and does basic SMTP communication
+// NOTE: For more on how SMTP handshakes work, check out:
+//    https://postmarkapp.com/guides/everything-you-need-to-know-about-smtp
 func HandleSMTP(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
 	defer func() {
 		if err := conn.Close(); err != nil {
