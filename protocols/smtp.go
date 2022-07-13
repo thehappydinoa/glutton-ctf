@@ -15,6 +15,10 @@ import (
 
 // maximum lines that can be read after the "DATA" command
 const maxDataRead = 500
+const VALID_SENDER_DOMAIN = ".+"
+const OUR_EMAIL_ADDR = "foo@censys.io"
+
+var valid_sender, valid_receiver bool = false, false
 
 // Client is a connection container
 type Client struct {
@@ -40,11 +44,11 @@ func rwait() {
 	time.Sleep(duration)
 }
 func validateMail(query string) bool {
-	email := regexp.MustCompile("^MAIL FROM:<.+@.+>$") // naive regex
+	email := regexp.MustCompile(fmt.Sprintf("^MAIL FROM:<.+@%s>$", VALID_SENDER_DOMAIN))
 	return email.MatchString(query)
 }
 func validateRCPT(query string) bool {
-	rcpt := regexp.MustCompile("^RCPT TO:<.+@.+>$")
+	rcpt := regexp.MustCompile(fmt.Sprintf("^RCPT TO:<%s>$", OUR_EMAIL_ADDR))
 	return rcpt.MatchString(query)
 }
 
@@ -79,12 +83,14 @@ func HandleSMTP(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) e
 		logger.Info(fmt.Sprintf("[smtp    ] Payload : %q", query))
 		if strings.HasPrefix(query, "HELO ") {
 			rwait()
-			client.w("250 Hello! Pleased to meet you.")
+			client.w("250 Hello! Pleased to meet you.\nOur first flag is ctf{8d637f30-ec7b-4f01-86b1-daf23d4f4643}")
 		} else if validateMail(query) {
 			rwait()
+			valid_sender = true
 			client.w("250 OK")
 		} else if validateRCPT(query) {
 			rwait()
+			valid_receiver = true
 			client.w("250 OK")
 		} else if strings.Compare(query, "DATA") == 0 {
 			client.w("354 End data with <CRLF>.<CRLF>")
@@ -105,7 +111,14 @@ func HandleSMTP(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) e
 			rwait()
 			client.w("250 OK")
 		} else if strings.Compare(query, "QUIT") == 0 {
-			client.w("Bye")
+			var message string = "Bye"
+			if valid_sender && valid_receiver {
+				// Respond with flag!
+				message += "\nctf{87ae2896-72e0-4a57-b7ef-efcdc10448fd}"
+			}
+			client.w(message)
+			// set sender and receiver back to false.
+			valid_sender, valid_receiver = false, false
 			break
 		} else {
 			client.w("Recheck the command you entered.")
