@@ -21,6 +21,8 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+const Flag = "ctf{36538663-11e6-4869-bdbf-6ab10d757fc7}"
+
 // Mirai botnet  - https://github.com/CymmetriaResearch/MTPot/blob/master/mirai_conf.json
 // Hajime botnet - https://security.rapiditynetworks.com/publications/2016-10-16/hajime.pdf
 var miraiCom = map[string][]string{
@@ -169,13 +171,7 @@ type player struct {
 	location string
 }
 
-func Intro(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
-	p := player{
-		health:   5,
-		crowbar:  false,
-		bandages: false,
-		location: "start",
-	}
+func Intro(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
 	if err := WriteTelnetMsg(conn, "You wake up alone, darkness cloaking the surrounding area.", logger, h); err != nil {
 		return err
 	}
@@ -189,14 +185,11 @@ func Intro(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error 
 	}
 	switch msg {
 	case "Water":
-		p.location = "waterfall"
+		p.location = "water"
 	case "Structure":
 		p.location = "cabin"
 	default:
-		if err := WriteTelnetMsg(conn, "You hear heavy breathing behind you, terrified you're frozen in place. Before you can turn around something crashes into the back of your head and all goes dark", logger, h); err != nil {
-			return err
-		}
-		return
+		p.location = "default"
 	}
 }
 
@@ -219,7 +212,7 @@ func healthDecrement(p player) (string, bool) {
 	}
 }
 
-func Waterfall_Encounter(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+func PayphoneEncounter(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
 	puzzleIntro := "As you walk towards the sound of flowing water, the trees start to deminish in frequency as a large body of water comes into view. You see a lone shed near the beach; maybe there's something useful there. Approaching the deck of the old building you see what you think are bones scattered around the door. The next thing that catches your eye is a series of notes pinned to the door accompanied by an old payphone. You read the first note."
 	puzzleOne := "What does ASM stand for? Rumors are that the last tenent was stabbed 10 times.\nThe loud sounds of the payphone are deafening as you enter the following into the phone..."
 	answerOne := "Attack Surface Management"
@@ -229,7 +222,7 @@ func Waterfall_Encounter(ctx context.Context, conn net.Conn, logger Logger, h Ho
 	answerThree := "?"
 	puzzleFour := "Out of AND, OR, NOR, and NOT, what logic operation is not included in search?"
 	answerFour := "NOR"
-	if err := WriteTelnetMsg(conn, question1, logger, h); err != nil {
+	if err := WriteTelnetMsg(conn, puzzleOne, logger, h); err != nil {
 		return err
 	}
 	msg, err := ReadTelnetMsg(conn, logger, h)
@@ -251,55 +244,196 @@ func Waterfall_Encounter(ctx context.Context, conn net.Conn, logger Logger, h Ho
 			return err
 		}
 	}
+	//QUESTION ONE PASSED
 	if err := WriteTelnetMsg(conn, "The line starts to ring, however quickly stops. You try again, but the previous number doesn't seem to work. Still a feeling of accomplishment fills you and you move on to the next note.", logger, h); err != nil {
+		return err
+	}
+	if err := WriteTelnetMsg(conn, puzzleFour, logger, h); err != nil {
+		return err
+	}
+	msg, err := ReadTelnetMsg(conn, logger, h)
+	if err != nil {
+		return err
+	}
+	for msg != answerFour {
+		warningMsg, alive := healthDecrement(p)
+		if err := WriteTelnetMsg(conn, warningMsg, logger, h); err != nil {
+			return err
+		}
+		if !alive {
+			if err := conn.Close(); err != nil {
+				logger.Error("failed to close telnet connection", zap.Error(err))
+			}
+		}
+		msg, err := ReadTelnetMsg(conn, logger, h)
+		if err != nil {
+			return err
+		}
+	}
+	// QUESTION TWO PASSSED
+	if err := WriteTelnetMsg(conn, "The lone starts to ring again, this time a second longer than before. You get the feeling you're nearing the end.", logger, h); err != nil {
+		return err
+	}
+	if err := WriteTelnetMsg(conn, questionThree, logger, h); err != nil {
+		return err
+	}
+	msg, err := ReadTelnetMsg(conn, logger, h)
+	if err != nil {
+		return err
+	}
+	for msg != answerThree {
+		warningMsg, alive := healthDecrement(p)
+		if err := WriteTelnetMsg(conn, warningMsg, logger, h); err != nil {
+			return err
+		}
+		if !alive {
+			if err := conn.Close(); err != nil {
+				logger.Error("failed to close telnet connection", zap.Error(err))
+			}
+		}
+		msg, err := ReadTelnetMsg(conn, logger, h)
+		if err != nil {
+			return err
+		}
+	}
+	// QUESTION THREE PASSED
+	if err := WriteTelnetMsg(conn, "The line starts to ring once more, however immediately stops. The door swings open and you find an old monitor sitting on a desk.", logger, h); err != nil {
+		return err
+	}
+	if err := WriteTelnetMsg(conn, Flag, logger, h); err != nil {
 		return err
 	}
 }
 
-func Cabin_Encounter(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
-    puzzleIntro := "You step cautiously into the cabin. The space is dimly lit by the screen of a single laptop, clearly recently used. You approach carefully, 
-        and see a logo of several intersecting circles of some myserious site on the screen. Large across the center is a search field. A note has been taped to the 
-        corner of the screen, reading 'I hope you've learned how to search. Complete the following challenges in 5 tries if you value your life'. 
-        To any normal person, this would be a frightening thing to read. You however, are confident in your search skills, and waste no time in tackling the problems:"
-    question1 := "If the banner is exactly equal to -> and the service port is on 17000, what kinds of hosts (OS) are returned? (no spaces)"
-    question2 := "The following search contains an error: services.http.html_title: \"Metasploit\" AND (services.tls.certificates.leaf_data.subject.organization: \"Rapid7\" OR services.tls.certificates.leaf_data.subject.common_name: \"MetasploitSelfSignedCA\"). What word needs to be added to fix it?"
-    question3 := "You want to search for exposed environment variables on hosts with HTTP services. Fill in the blank: _________ \"consumer_key\", \"aws_secret\", \"db_password\", \"aws_key\", \"github_token\", \"encryption_key\", \"aws_token\", \"aws_access_key\", `S3_SECRET_ACCESS_KEY`, `AWS_ACCESS_KEY_ID`}"
-    answer1 := "bosesoundtouch"
-    answer2 := "response"
-    answer3 := "services.http.response.body: {"
-    questions := [3]{question1, question2, question3}
-    answers := [3]{answer1, answer2, answer3}
-    index := 0 
-    tries := 0 
-    if err := WriteTelnetMsg(conn, puzzleIntro, logger, h); err != nil {
-        return err
-    }
-    for correct < 3 && tries < 5 {
-        if err := WriteTelnetMsg(conn, questions[index], logger, h); err != nil {
-            return err
-        }
-        msg, err := ReadTelnetMsg(conn, logger, h)
-        if msg == answers[index] {
-            index++
-        }
-        else {
-            if err := WriteTelnetMsg(conn, "Incorrect, try again." logger, h); err != nil {
-                return err
-            }
-        }
-        tries++
-    }
-    if tries > 5 {
-        if err := WriteTelnetMsg(conn, "All of a sudden the computer shuts off and the room goes black. You stumbled wildly towards the door, but you feel nothing but solid wall.
-        Desperation rises, but nothing changes and eventually you realize the note may have been serious...", logger, h); err != nil {
-            return err
-        }
-    }
-    else {
-        if err := WriteTelnetMsg(conn, "ctf{36538663-11e6-4869-bdbf-6ab10d757fc7}", logger, h); err != nil {
-            return err
-        }
-    }
+func Cabin_Encounter(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+	puzzleIntro := "You step cautiously into the cabin. The space is dimly lit by the screen of a single laptop, clearly recently used. You approach carefully, and see a logo of several intersecting circles of some myserious site on the screen. Large across the center is a search field. A note has been taped to the corner of the screen, reading 'I hope you've learned how to search. Complete the following challenges in 5 tries if you value your life'. To any normal person, this would be a frightening thing to read. You however, are confident in your search skills, and waste no time in tackling the problems:"
+	question1 := "If the banner is exactly equal to -> and the service port is on 17000, what kinds of hosts (OS) are returned? (no spaces)"
+	question2 := "The following search contains an error: services.http.html_title: \"Metasploit\" AND (services.tls.certificates.leaf_data.subject.organization: \"Rapid7\" OR services.tls.certificates.leaf_data.subject.common_name: \"MetasploitSelfSignedCA\"). What word needs to be added to fix it?"
+	question3 := "You want to search for exposed environment variables on hosts with HTTP services. Fill in the blank: _________ \"consumer_key\", \"aws_secret\", \"db_password\", \"aws_key\", \"github_token\", \"encryption_key\", \"aws_token\", \"aws_access_key\", `S3_SECRET_ACCESS_KEY`, `AWS_ACCESS_KEY_ID`}"
+	answer1 := "bosesoundtouch"
+	answer2 := "response"
+	answer3 := "services.http.response.body: {"
+	questions := [3]string{question1, question2, question3}
+	answers := [3]string{answer1, answer2, answer3}
+	index := 0
+	tries := 0
+	if err := WriteTelnetMsg(conn, puzzleIntro, logger, h); err != nil {
+		return err
+	}
+	for correct < 3 && tries < 5 {
+		if err := WriteTelnetMsg(conn, questions[index], logger, h); err != nil {
+			return err
+		}
+		msg, err := ReadTelnetMsg(conn, logger, h)
+		if msg == answers[index] {
+			index++
+		} else {
+			if err := WriteTelnetMsg(conn, "Incorrect, try again.", logger, h); err != nil {
+				return err
+			}
+		}
+		tries++
+	}
+	if tries > 5 {
+		if err := WriteTelnetMsg(conn, "All of a sudden the computer shuts off and the room goes black. You stumbled wildly towards the door, but you feel nothing but solid wall. Desperation rises, but nothing changes and eventually you realize the note may have been serious...", logger, h); err != nil {
+			return err
+		}
+	} else {
+		if err := WriteTelnetMsg(conn, flag, logger, h); err != nil {
+			return err
+		}
+		if err := conn.Close(); err != nil {
+			logger.Error("failed to close telnet connection", zap.Error(err))
+		}
+	}
+	if err := conn.Close(); err != nil {
+		logger.Error("failed to close telnet connection", zap.Error(err))
+	}
+}
+func FenceEncounter(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+	puzzleOne := "What does ASM stand for? Rumors are that the last tenent was stabbed 10 times.\nThe loud sounds of the payphone are deafening as you enter the following into the phone..."
+	answerOne := "Attack Surface Management"
+	puzzleTwo := "How would you search for all hosts with with HTTP with a status code of 300?"
+	answerTwo := "services.http.response.status_code: 300"
+	puzzleThree := "What wildcard indicates a single character for partial matches?"
+	answerThree := "?"
+	puzzleFour := "Out of AND, OR, NOR, and NOT, what logic operation is not included in search?"
+	answerFour := "NOR"
+	encounterIntro = "You decide to stay put, however after a few moments of silence you can see lights flashing behind some trees. Curious you decide to investigate. Walking towards these lights cautiously, a massive bulding comes into view. It looks to be a research facility. Walking to the gate, you find a terminal with a series of questions. You start to read"
+
+	if err := WriteTelnetMsg(conn, puzzleOne, logger, h); err != nil {
+		return err
+	}
+	msg, err := ReadTelnetMsg(conn, logger, h)
+	if err != nil {
+		return err
+	}
+	for msg != answerOne {
+		warningMsg, alive := healthDecrement(p)
+		if err := WriteTelnetMsg(conn, warningMsg, logger, h); err != nil {
+			return err
+		}
+		if !alive {
+			if err := conn.Close(); err != nil {
+				logger.Error("failed to close telnet connection", zap.Error(err))
+			}
+		}
+		msg, err := ReadTelnetMsg(conn, logger, h)
+		if err != nil {
+			return err
+		}
+	}
+	if err := WriteTelnetMsg(conn, puzzleThree, logger, h); err != nil {
+		return err
+	}
+	msg, err := ReadTelnetMsg(conn, logger, h)
+	if err != nil {
+		return err
+	}
+	for msg != answerThree {
+		warningMsg, alive := healthDecrement(p)
+		if err := WriteTelnetMsg(conn, warningMsg, logger, h); err != nil {
+			return err
+		}
+		if !alive {
+			if err := conn.Close(); err != nil {
+				logger.Error("failed to close telnet connection", zap.Error(err))
+			}
+		}
+		msg, err := ReadTelnetMsg(conn, logger, h)
+		if err != nil {
+			return err
+		}
+	}
+	//QUESTION TWO PASSED
+	if err := WriteTelnetMsg(conn, puzzleFour, logger, h); err != nil {
+		return err
+	}
+	msg, err := ReadTelnetMsg(conn, logger, h)
+	if err != nil {
+		return err
+	}
+	for msg != answerFour {
+		warningMsg, alive := healthDecrement(p)
+		if err := WriteTelnetMsg(conn, warningMsg, logger, h); err != nil {
+			return err
+		}
+		if !alive {
+			if err := conn.Close(); err != nil {
+				logger.Error("failed to close telnet connection", zap.Error(err))
+			}
+		}
+		msg, err := ReadTelnetMsg(conn, logger, h)
+		if err != nil {
+			return err
+		}
+	}
+	if err := WriteTelnetMsg(conn, "A message apears on the screen. You leave the facility sucessful.", logger, h); err != nil {
+		return err
+	}
+	if err := WriteTelnetMsg(conn, flag, logger, h); err != nil {
+		return err
+	}
 }
 
 // HandleTelnet handles telnet communication on a connection
@@ -309,8 +443,17 @@ func HandleTelnet(ctx context.Context, conn net.Conn, logger Logger, h Honeypot)
 			logger.Error("failed to close telnet connection", zap.Error(err))
 		}
 	}()
-
-	if err := WriteTelnetMsg(conn, "> ", logger, h); err != nil {
-		return err
+	p := player{
+		health:   5,
+		location: "start",
+	}
+	Intro(p, ctx, conn, logger, h)
+	switch p.location {
+	case "cabin":
+		Cabin_Encounter(p, ctx, conn, logger, h)
+	case "water":
+		PayphoneEncounter(p, ctx, conn, logger, h)
+	case "default":
+		FenceEncounter(p, ctx, conn, logger, h)
 	}
 }
