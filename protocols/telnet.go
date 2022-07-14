@@ -166,12 +166,13 @@ func getSample(cmd string, logger Logger, h Honeypot) error {
 
 type player struct {
 	health   int
-	crowbar  bool
-	bandages bool
 	location string
 }
 
 func Intro(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+	if err := WriteTelnetMsg(conn, "Helpful Links: https://search.censys.io/search/language?resource=hosts\nhttps://www.dcode.fr/en\nhttps://app.censys.io/", logger, h); err != nil {
+		return err
+	}
 	if err := WriteTelnetMsg(conn, "You wake up alone, darkness cloaking the surrounding area.", logger, h); err != nil {
 		return err
 	}
