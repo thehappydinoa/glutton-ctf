@@ -2,8 +2,7 @@
 rules:
   - match: tcp dst port 23
     type: conn_handler
-    name: proxy_telnet
-    target: tcp://35.224.49.40:23
+    target: telnet
   - match: tcp
     type: drop
   - match: udp
