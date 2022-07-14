@@ -213,15 +213,9 @@ func healthDecrement(p player) (string, bool) {
 }
 
 func PayphoneEncounter(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
-	puzzleIntro := "As you walk towards the sound of flowing water, the trees start to deminish in frequency as a large body of water comes into view. You see a lone shed near the beach; maybe there's something useful there. Approaching the deck of the old building you see what you think are bones scattered around the door. The next thing that catches your eye is a series of notes pinned to the door accompanied by an old payphone. You read the first note."
-	puzzleOne := "What does ASM stand for? Rumors are that the last tenent was stabbed 10 times.\nThe loud sounds of the payphone are deafening as you enter the following into the phone..."
-	answerOne := "Attack Surface Management"
-	puzzleTwo := "How would you search for all hosts with with HTTP with a status code of 300?"
-	answerTwo := "services.http.response.status_code: 300"
-	puzzleThree := "What wildcard indicates a single character for partial matches?"
-	answerThree := "?"
-	puzzleFour := "Out of AND, OR, NOR, and NOT, what logic operation is not included in search?"
-	answerFour := "NOR"
+	puzzleIntro := "As you walk towards the sound of flowing water, the trees start to deminish in frequency as a large body of water comes into view. You see a lone payphone booth near the beach; maybe you can find what you need here? Approaching the booth you see what you think are bones scattered around the inside of the door. The next thing that catches your eye is a series of notes pinned to the wall accompanied by the phone. You read the note."
+	puzzleOne := "izl{36538663-11k6-4869-hjhl-6gh10j757li7}"
+	answerOne := Flag
 	if err := WriteTelnetMsg(conn, puzzleOne, logger, h); err != nil {
 		return err
 	}
@@ -244,64 +238,12 @@ func PayphoneEncounter(p player, ctx context.Context, conn net.Conn, logger Logg
 			return err
 		}
 	}
+	if err := WriteTelnetMsg(conn, "A strong sense of accomplishment fills you.", logger, h); err != nil {
+		return err
+	}
 	//QUESTION ONE PASSED
-	if err := WriteTelnetMsg(conn, "The line starts to ring, however quickly stops. You try again, but the previous number doesn't seem to work. Still a feeling of accomplishment fills you and you move on to the next note.", logger, h); err != nil {
-		return err
-	}
-	if err := WriteTelnetMsg(conn, puzzleFour, logger, h); err != nil {
-		return err
-	}
-	msg, err := ReadTelnetMsg(conn, logger, h)
-	if err != nil {
-		return err
-	}
-	for msg != answerFour {
-		warningMsg, alive := healthDecrement(p)
-		if err := WriteTelnetMsg(conn, warningMsg, logger, h); err != nil {
-			return err
-		}
-		if !alive {
-			if err := conn.Close(); err != nil {
-				logger.Error("failed to close telnet connection", zap.Error(err))
-			}
-		}
-		msg, err := ReadTelnetMsg(conn, logger, h)
-		if err != nil {
-			return err
-		}
-	}
-	// QUESTION TWO PASSSED
-	if err := WriteTelnetMsg(conn, "The lone starts to ring again, this time a second longer than before. You get the feeling you're nearing the end.", logger, h); err != nil {
-		return err
-	}
-	if err := WriteTelnetMsg(conn, questionThree, logger, h); err != nil {
-		return err
-	}
-	msg, err := ReadTelnetMsg(conn, logger, h)
-	if err != nil {
-		return err
-	}
-	for msg != answerThree {
-		warningMsg, alive := healthDecrement(p)
-		if err := WriteTelnetMsg(conn, warningMsg, logger, h); err != nil {
-			return err
-		}
-		if !alive {
-			if err := conn.Close(); err != nil {
-				logger.Error("failed to close telnet connection", zap.Error(err))
-			}
-		}
-		msg, err := ReadTelnetMsg(conn, logger, h)
-		if err != nil {
-			return err
-		}
-	}
-	// QUESTION THREE PASSED
-	if err := WriteTelnetMsg(conn, "The line starts to ring once more, however immediately stops. The door swings open and you find an old monitor sitting on a desk.", logger, h); err != nil {
-		return err
-	}
-	if err := WriteTelnetMsg(conn, Flag, logger, h); err != nil {
-		return err
+	if err := conn.Close(); err != nil {
+		logger.Error("failed to close telnet connection", zap.Error(err))
 	}
 }
 
@@ -339,7 +281,7 @@ func Cabin_Encounter(p player, ctx context.Context, conn net.Conn, logger Logger
 			return err
 		}
 	} else {
-		if err := WriteTelnetMsg(conn, flag, logger, h); err != nil {
+		if err := WriteTelnetMsg(conn, Flag, logger, h); err != nil {
 			return err
 		}
 		if err := conn.Close(); err != nil {
@@ -431,8 +373,11 @@ func FenceEncounter(ctx context.Context, conn net.Conn, logger Logger, h Honeypo
 	if err := WriteTelnetMsg(conn, "A message apears on the screen. You leave the facility sucessful.", logger, h); err != nil {
 		return err
 	}
-	if err := WriteTelnetMsg(conn, flag, logger, h); err != nil {
+	if err := WriteTelnetMsg(conn, Flag, logger, h); err != nil {
 		return err
+	}
+	if err := conn.Close(); err != nil {
+		logger.Error("failed to close telnet connection", zap.Error(err))
 	}
 }
 
