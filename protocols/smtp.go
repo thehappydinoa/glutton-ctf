@@ -84,7 +84,7 @@ func HandleSMTP(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) e
 		}
 		query := strings.Trim(data, "\r\n")
 		logger.Info(fmt.Sprintf("[smtp    ] Payload : %q", query))
-		if strings.HasPrefix(query, "HELO ") {
+		if strings.HasPrefix(query, "HELO") || strings.HasPrefix(query, "EHLO") {
 			rwait()
 			client.w("250 Hello! Pleased to meet you.\r\nOur first flag is ctf{8d637f30-ec7b-4f01-86b1-daf23d4f4643}")
 		} else if validateMail(query) {
