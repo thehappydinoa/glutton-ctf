@@ -8,12 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -163,6 +161,80 @@ func getSample(cmd string, logger Logger, h Honeypot) error {
 	return nil
 }
 
+type player struct {
+	health   int
+	crowbar  bool
+	bandages bool
+	location string
+}
+
+func Intro(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+	p := player{
+		health:   5,
+		crowbar:  false,
+		bandages: false,
+		location: "start",
+	}
+	if err := WriteTelnetMsg(conn, "You wake up alone, darkness cloaking the surrounding area.", logger, h); err != nil {
+		return err
+	}
+	time.Sleep(time.Second)
+	if err := WriteTelnetMsg(conn, "The air is musty and a root digs into your back and as you right yourself you find a flashlght laying on the ground next to you\n As you flick it on, you can see a trail leading to a structure in the distance, you can also hear water flowing in the opposite direction. Where do you go? (Water, Structure, Stay)", logger, h); err != nil {
+		if err := WriteTelnetMsg(conn, "The lock clicks open and you finally have the means to escape your dire fate thanks to your amazing knowledge of Censys :)", logger, h); err != nil {
+			return err
+		}
+		return err
+	}
+	msg, err := ReadTelnetMsg(conn, logger, h)
+	if err != nil {
+		return err
+	}
+	switch msg {
+	case "Water":
+		p.location = "waterfall"
+	case "Structure":
+		p.location = "cabin"
+	default:
+		if err := WriteTelnetMsg(conn, "You hear heavy breathing behind you, terrified you're frozen in place. Before you can turn around something crashes into the back of your head and all goes dark", logger, h); err != nil {
+			return err
+		}
+		return
+	}
+}
+
+func Waterfall_Encounter(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+	if err := WriteTelnetMsg(conn, "As you walk to the sound, the trees start to deminish in frequency and a large body of water comes into view\nThere's a shed that has a padlock on it that holds 4 digits. As you examine the door you can see scratches carved into the door. How many more services does Censys scan compared to Shodan? What do you input?", logger, h); err != nil {
+		return err
+	}
+	msg, err := ReadTelnetMsg(conn, logger, h)
+	if err != nil {
+		return err
+	}
+	for msg != "2733" {
+		if err := WriteTelnetMsg(conn, "Nothing happens. Try again", logger, h); err != nil {
+			return err
+		}
+		msg, err := ReadTelnetMsg(conn, logger, h)
+		if err != nil {
+			return err
+		}
+	}
+	if err := WriteTelnetMsg(conn, "The lock clicks open and you finally have the means to escape your dire fate thanks to your amazing knowledge of Censys :)", logger, h); err != nil {
+		return err
+	}
+}
+
+func Cabin_Encounter(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+	if err := WriteTelnetMsg(conn, "You wander into a small wooden cabin. Inside is dark - a lone candle burns low on the opposite end, providing just enough light for you to see 2 doors. You open both and see that one shows a ladder which goes up towards an attic, and behind the other is a kitchen, where someone has left a pot of soup boiling over an open fire. Which way do you go? (Attic, Kitchen)", logger, h); err != nil {
+		return err
+	}
+}
+
+// msg, err := ReadTelnetMsg(conn, logger, h)
+/*if msg == "Kitchen" {
+
+}*/
+
 // HandleTelnet handles telnet communication on a connection
 func HandleTelnet(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
 	defer func() {
@@ -171,77 +243,7 @@ func HandleTelnet(ctx context.Context, conn net.Conn, logger Logger, h Honeypot)
 		}
 	}()
 
-	// TODO (glaslos): Add device banner
-
-	// telnet window size negotiation response
-	if err := WriteTelnetMsg(conn, "\xff\xfd\x18\xff\xfd\x20\xff\xfd\x23\xff\xfd\x27", logger, h); err != nil {
+	if err := WriteTelnetMsg(conn, "> ", logger, h); err != nil {
 		return err
-	}
-
-	// User name prompt
-	if err := WriteTelnetMsg(conn, "Username: ", logger, h); err != nil {
-		return err
-	}
-	if _, err := ReadTelnetMsg(conn, logger, h); err != nil {
-		return err
-	}
-	if err := WriteTelnetMsg(conn, "Password: ", logger, h); err != nil {
-		return err
-	}
-	if _, err := ReadTelnetMsg(conn, logger, h); err != nil {
-		return err
-	}
-
-	if err := WriteTelnetMsg(conn, "welcome\r\n> ", logger, h); err != nil {
-		return err
-	}
-
-	for {
-		h.UpdateConnectionTimeout(ctx, conn)
-		msg, err := ReadTelnetMsg(conn, logger, h)
-		if err != nil {
-			return err
-		}
-		for _, cmd := range strings.Split(msg, ";") {
-			if strings.Contains(strings.Trim(cmd, " "), "wget http") {
-				go getSample(strings.Trim(cmd, " "), logger, h)
-			}
-			if strings.TrimRight(cmd, "") == " rm /dev/.t" {
-				continue
-			}
-			if strings.TrimRight(cmd, "\r\n") == " rm /dev/.sh" {
-				continue
-			}
-			if strings.TrimRight(cmd, "\r\n") == "cd /dev/" {
-				if err = WriteTelnetMsg(conn, "ECCHI: applet not found\r\n", logger, h); err != nil {
-					return err
-				}
-				if err = WriteTelnetMsg(conn, "\r\nBusyBox v1.16.1 (2014-03-04 16:00:18 CST) built-it shell (ash)\r\nEnter 'help' for a list of built-in commands.\r\n", logger, h); err != nil {
-					return err
-				}
-				continue
-			}
-
-			if resp := miraiCom[strings.TrimSpace(cmd)]; len(resp) > 0 {
-				if err = WriteTelnetMsg(conn, resp[rand.Intn(len(resp))]+"\r\n", logger, h); err != nil {
-					return err
-				}
-			} else {
-				// /bin/busybox YDKBI
-				re := regexp.MustCompile(`\/bin\/busybox (?P<applet>[A-Z]+)`)
-				match := re.FindStringSubmatch(cmd)
-				if len(match) > 1 {
-					if err = WriteTelnetMsg(conn, match[1]+": applet not found\r\n", logger, h); err != nil {
-						return err
-					}
-					if err = WriteTelnetMsg(conn, "BusyBox v1.16.1 (2014-03-04 16:00:18 CST) built-in shell (ash)\r\nEnter 'help' for a list of built-in commands.\r\n", logger, h); err != nil {
-						return err
-					}
-				}
-			}
-		}
-		if err := WriteTelnetMsg(conn, "> ", logger, h); err != nil {
-			return err
-		}
 	}
 }
