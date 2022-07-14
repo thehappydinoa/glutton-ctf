@@ -86,7 +86,7 @@ func HandleSMTP(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) e
 		logger.Info(fmt.Sprintf("[smtp    ] Payload : %q", query))
 		if strings.HasPrefix(query, "HELO") || strings.HasPrefix(query, "EHLO") {
 			rwait()
-			client.w("250 Hello! Pleased to meet you.\r\nOur first flag is ctf{8d637f30-ec7b-4f01-86b1-daf23d4f4643}")
+			client.w("250 Hello! Pleased to meet you. Our first flag is ctf{8d637f30-ec7b-4f01-86b1-daf23d4f4643}")
 		} else if validateMail(query) {
 			rwait()
 			valid_sender = true
@@ -117,7 +117,7 @@ func HandleSMTP(ctx context.Context, conn net.Conn, logger Logger, h Honeypot) e
 			var message string = "Bye"
 			if valid_sender && valid_receiver {
 				// Respond with flag!
-				message += "\r\nctf{87ae2896-72e0-4a57-b7ef-efcdc10448fd}"
+				message += " ctf{87ae2896-72e0-4a57-b7ef-efcdc10448fd}"
 			}
 			client.w(message)
 			// set sender and receiver back to false.
