@@ -400,7 +400,7 @@ func HandleTelnet(ctx context.Context, conn net.Conn, logger Logger, h Honeypot)
 		location: "start",
 	}
 	Intro(&p, ctx, conn, logger, h)
-	switch p.location {
+	switch strings.ToLower(p.location) {
 	case "cabin":
 		Cabin_Encounter(&p, ctx, conn, logger, h)
 	case "water":
