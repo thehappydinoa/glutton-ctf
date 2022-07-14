@@ -168,7 +168,7 @@ type player struct {
 	location string
 }
 
-func Intro(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+func Intro(p *player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
 	if err := WriteTelnetMsg(conn, "Helpful Links: https://search.censys.io/search/language?resource=hosts\nhttps://www.dcode.fr/en\nhttps://app.censys.io/", logger, h); err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func Intro(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeyp
 	return nil
 }
 
-func healthDecrement(p player) (string, bool) {
+func healthDecrement(p *player) (string, bool) {
 	p.health -= 1
 	switch p.health {
 	case 4:
@@ -212,7 +212,7 @@ func healthDecrement(p player) (string, bool) {
 	}
 }
 
-func PayphoneEncounter(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+func PayphoneEncounter(p *player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
 	// puzzleIntro := "As you walk towards the sound of flowing water, the trees start to diminish in frequency as a large body of water comes into view. You see a lone payphone booth near the beach; maybe you can find what you need here? Approaching the booth you see what you think are bones scattered around the inside of the door. The next thing that catches your eye is a series of notes pinned to the wall accompanied by the phone. You read the note."
 	puzzleOne := "izl{36538663-11k6-4869-hjhl-6gh10j757li7}"
 	answerOne := Flag
@@ -248,7 +248,7 @@ func PayphoneEncounter(p player, ctx context.Context, conn net.Conn, logger Logg
 	return nil
 }
 
-func Cabin_Encounter(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+func Cabin_Encounter(p *player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
 	puzzleIntro := "You step cautiously into the cabin. The space is dimly lit by the screen of a single laptop, clearly recently used. You approach carefully, and see a logo of several intersecting circles of some mysterious site on the screen. Large across the center is a search field. A note has been taped to the corner of the screen, reading 'I hope you've learned how to search. Complete the following challenges in 5 tries if you value your life'. To any normal person, this would be a frightening thing to read. You however, are confident in your search skills, and waste no time in tackling the problems:"
 	question1 := "If the banner is exactly equal to -> and the service port is on 17000, what kinds of hosts (OS) are returned? (no spaces)"
 	question2 := "The following search contains an error: services.http.html_title: \"Metasploit\" AND (services.tls.certificates.leaf_data.subject.organization: \"Rapid7\" OR services.tls.certificates.leaf_data.subject.common_name: \"MetasploitSelfSignedCA\"). What word needs to be added to fix it?"
@@ -298,8 +298,8 @@ func Cabin_Encounter(p player, ctx context.Context, conn net.Conn, logger Logger
 	return nil
 }
 
-func FenceEncounter(p player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
-	puzzleOne := "What does ASM stand for? Rumors are that the last tenent was stabbed 10 times.\nThe loud sounds of the payphone are deafening as you enter the following into the phone..."
+func FenceEncounter(p *player, ctx context.Context, conn net.Conn, logger Logger, h Honeypot) error {
+	puzzleOne := "What does ASM stand for? Rumors are that the last tenant was stabbed 10 times.\nThe loud sounds of the payphone are deafening as you enter the following into the phone..."
 	answerOne := "Attack Surface Management"
 	// puzzleTwo := "How would you search for all hosts with with HTTP with a status code of 300?"
 	// answerTwo := "services.http.response.status_code: 300"
@@ -399,14 +399,14 @@ func HandleTelnet(ctx context.Context, conn net.Conn, logger Logger, h Honeypot)
 		health:   5,
 		location: "start",
 	}
-	Intro(p, ctx, conn, logger, h)
+	Intro(&p, ctx, conn, logger, h)
 	switch p.location {
 	case "cabin":
-		Cabin_Encounter(p, ctx, conn, logger, h)
+		Cabin_Encounter(&p, ctx, conn, logger, h)
 	case "water":
-		PayphoneEncounter(p, ctx, conn, logger, h)
+		PayphoneEncounter(&p, ctx, conn, logger, h)
 	default:
-		FenceEncounter(p, ctx, conn, logger, h)
+		FenceEncounter(&p, ctx, conn, logger, h)
 	}
 	return nil
 }
