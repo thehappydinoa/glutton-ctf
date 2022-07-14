@@ -1,10 +1,5 @@
 # The telnet target will be filled in by glutton on execution of startup-telnet.sh
 rules:
-  - match: tcp
-    type: conn_handler
-    target: default
-  - match: udp
-    type: drop
   - match: tcp dst port 23
     type: conn_handler
     name: proxy_telnet
