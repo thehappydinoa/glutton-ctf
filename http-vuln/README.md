@@ -1,4 +1,4 @@
-# Vuln Http
+# Vulnerable HTTP Server
 
 [Website](https://www.npmjs.com/package/fake-http)
 
@@ -10,5 +10,12 @@
 ## Run Locally
 
 ```sh
-$(npm bin)/fake-http ./data --port 8000
+npm install
+npm run start
+```
+
+## Run production config
+
+```sh
+npm run start:prod
 ```
